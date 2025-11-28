@@ -15,10 +15,10 @@ public:
     virtual ~Middleware() = default;
 
     // 请求前处理
-    virtual void before(HttpRequest &req);
+    virtual void before(HttpRequest &req) = 0;
 
     // 响应后处理
-    virtual void after(HttpResponse &resp);
+    virtual void after(HttpResponse &resp) = 0;
 
     // 设置下一个中间件
     void setNext(std::shared_ptr<Middleware> next)

@@ -12,23 +12,23 @@ class HttpContext
 public:
     enum HttpRequestParseState
     {
-        mExpectRequestLine, // 解析请求行
-        mExpectHeaders,     // 解析请求头
-        mExpectBody,        // 解析请求体
-        mGotAll,            // 解析完成
+        kExpectRequestLine, // 解析请求行
+        kExpectHeaders,     // 解析请求头
+        kExpectBody,        // 解析请求体
+        kGotAll,            // 解析完成
     };
 
     HttpContext()
-    : state_(mExpectRequestLine)
+    : state_(kExpectRequestLine)
     {}
 
     bool parseRequest(muduo::net::Buffer* buf, muduo::Timestamp receiveTime);
     bool gotAll() const
-    { return state_ == mGotAll; }
+    { return state_ == kGotAll; }
 
     void reset()
     {
-        state_ = mExpectRequestLine;
+        state_ = kExpectRequestLine;
         HttpRequest dummyDate;
         request_.swap(dummyDate);
     }

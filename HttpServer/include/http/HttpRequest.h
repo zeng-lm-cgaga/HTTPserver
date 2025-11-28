@@ -14,17 +14,17 @@ class HttpRequest
 public:
     enum Method // 请求方法
     {
-        mInvalid, // 无效或未知的 HTTP 方法
-        mGet, // GET：请求获取资源（安全、幂等）
-        mPost, // POST：提交数据以创建或处理资源（通常非幂等）
-        mHead, // HEAD：只返回响应头，不返回响应体
-        mPut, // PUT：替换或创建资源的完整表示（幂等）
-        mDelete, // DELETE：删除指定资源（幂等）
-        mOptions // OPTIONS：查询资源支持的通信选项（常用于 CORS 预检）
+        kInvalid, // 无效或未知的 HTTP 方法
+        kGet, // GET：请求获取资源（安全、幂等）
+        kPost, // POST：提交数据以创建或处理资源（通常非幂等）
+        kHead, // HEAD：只返回响应头，不返回响应体
+        kPut, // PUT：替换或创建资源的完整表示（幂等）
+        kDelete, // DELETE：删除指定资源（幂等）
+        kOptions // OPTIONS：查询资源支持的通信选项（常用于 CORS 预检）
     };
 
     HttpRequest()
-        : method_(mInvalid)
+        : method_(kInvalid)
         , version_("Unknown")
     {}
 

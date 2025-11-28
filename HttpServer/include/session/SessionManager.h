@@ -21,7 +21,7 @@ public:
     std::shared_ptr<Session> getSession(const HttpRequest &req , HttpResponse *resp);
 
     // 销毁会话
-    void destorySession(const std::string &sessionId);
+    void destroySession(const std::string &sessionId);
 
     // 清理过期会话
     void cleanExpiredSessions();

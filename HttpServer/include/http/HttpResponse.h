@@ -10,20 +10,20 @@ class HttpResponse
 public:
     enum HttpStatusCode
     {
-        mUnknown,
-        m200Ok = 200,
-        m204NoContent = 204,
-        m301MovedPermanently = 301,
-        m400BadRequest = 400,
-        m401Unauthorized = 401,
-        m403Forbidden = 403,
-        m404NotFound = 404,
-        m409Conflict = 409,
-        m500InternalServerError = 500,
+        kUnknown,
+        k200Ok = 200,
+        k204NoContent = 204,
+        k301MovedPermanently = 301,
+        k400BadRequest = 400,
+        k401Unauthorized = 401,
+        k403Forbidden = 403,
+        k404NotFound = 404,
+        k409Conflict = 409,
+        k500InternalServerError = 500,
     };
 
     HttpResponse(bool close = true)
-        : statusCode_(mUnknown)
+        : statusCode_(kUnknown)
         , closeConnection_(close)
     {}
 

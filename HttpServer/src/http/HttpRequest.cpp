@@ -11,34 +11,34 @@ void HttpRequest::setReceiveTime(muduo::Timestamp t)
 
 bool HttpRequest::setMethod(const char* start, const char* end)
 {
-    assert(method_ == mInvalid);
+    assert(method_ == kInvalid);
     std::string m(start, end); // [start, end)
     if(m == "GET")
     {
-        method_ = mGet;
+        method_ = kGet;
     }
     else if(m == "POST")
     {
-        method_ = mPost;
+        method_ = kPost;
     }
     else if(m == "PUT")
     {
-        method_ = mPut;
+        method_ = kPut;
     }
     else if (m == "DELETE")
     {
-        method_ = mDelete;
+        method_ = kDelete;
     }
     else if(m == "OPTIONS")
     {
-        method_ = mOptions;
+        method_ = kOptions;
     }
     else
     {
-        method_ = mInvalid;
+        method_ = kInvalid;
     }
     
-    return method_ != mInvalid;
+    return method_ != kInvalid;
 }
 
 void HttpRequest::setPath(const char* start, const char* end)

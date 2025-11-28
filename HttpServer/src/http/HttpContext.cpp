@@ -13,7 +13,7 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
     bool hasMore = true;
     while(hasMore)
     {
-        if(state_ == mExpectRequestLine) // 解析首行
+        if(state_ == kExpectRequestLine) // 解析首行
         {
             const char *crlf = buf->findCRLF();
             if(crlf)
@@ -23,7 +23,7 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
                 {
                     request_.setReceiveTime(receiveTime);
                     buf->retrieveUntil(crlf + 2);
-                    state_ = mExpectHeaders;
+                    state_ = kExpectHeaders;
                 }
                 else
                 {
@@ -35,7 +35,7 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
                 hasMore = false;
             }
         }
-        else if(state_ == mExpectHeaders)
+        else if(state_ == kExpectHeaders)
         {
             const char *crlf = buf->findCRLF();
             if(crlf)
@@ -49,8 +49,8 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
                 {
                     // 空行， 结束Header
                     // 根据请求方法和Content-Length判断是否需要继续读取body
-                    if(request_.method() == HttpRequest::mPost ||
-                       request_.method() == HttpRequest::mPut)
+                    if(request_.method() == HttpRequest::kPost ||
+                       request_.method() == HttpRequest::kPut)
                     {
                         std::string contentLength = request_.getHeader("Content-Length");
                         if(!contentLength.empty())
@@ -58,11 +58,11 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
                             request_.setContentLength(std::stoi(contentLength));
                             if(request_.contentlength() > 0)
                             {
-                                state_ = mExpectBody;
+                                state_ = kExpectBody;
                             }
                             else
                             {
-                                state_ = mGotAll;
+                                state_ = kGotAll;
                                 hasMore = false;
                             }
                         }
@@ -76,7 +76,7 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
                     else
                     {
                         // GET/HEAD/DELETE 等方式直接完成（没有请求体）
-                        state_ = mGotAll;
+                        state_ = kGotAll;
                         hasMore = false;
                     }
                 }
@@ -92,7 +92,7 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
                 hasMore = false;
             }
         }
-        else if(state_ == mExpectBody)
+        else if(state_ == kExpectBody)
         {
             // 检查缓冲区是否有足够的数据
             if(buf->readableBytes() < request_.contentlength())
@@ -108,7 +108,7 @@ bool HttpContext::parseRequest(Buffer *buf, Timestamp receiveTime)
             // 准确移动读指针
             buf->retrieve(request_.contentlength());
 
-            state_ = mGotAll;
+            state_ = kGotAll;
             hasMore = false;
         }
     }

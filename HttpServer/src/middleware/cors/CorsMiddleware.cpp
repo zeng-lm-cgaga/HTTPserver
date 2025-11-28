@@ -14,7 +14,7 @@ namespace middleware
     {
         LOG_DEBUG << "CorsMiddleware::before - Processing request";
 
-        if(request.method() == HttpRequest::Method::mOptions)
+        if(request.method() == HttpRequest::Method::kOptions)
         {
             LOG_INFO << "Procession CORS preflight requet"; // preflight 是浏览器发送的 OPTIONS 预检请求
             HttpResponse response;
@@ -57,12 +57,12 @@ namespace middleware
         if(!isOriginAllowed(origin))
         {
             LOG_WARN << "Origin is not allowed: " << origin;
-            response.setStatusCode(HttpResponse::m403Forbidden);
+            response.setStatusCode(HttpResponse::k403Forbidden);
             return;
         }
 
         addCorsHeaders(response, origin);
-        response.setStatusCode(HttpResponse::m204NoContent);
+        response.setStatusCode(HttpResponse::k204NoContent);
         LOG_INFO << "Preflight request processed successfully";
     }
 

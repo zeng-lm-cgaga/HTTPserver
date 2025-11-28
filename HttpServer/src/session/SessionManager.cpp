@@ -56,7 +56,7 @@ namespace session
         return ss.str();
     }
 
-    void SessionManager::destorySession(const std::string& sessionId)
+    void SessionManager::destroySession(const std::string& sessionId)
     {
         storage_->remove(sessionId);
     }
