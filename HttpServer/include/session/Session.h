@@ -16,7 +16,7 @@ class SessionManager;
 class Session : public std::enable_shared_from_this<Session>
 {
 public:
-    Session(const std::string &sessionId, SessionManager *sessionManager, int maxAge = 360); // 默认一个小时过期
+    Session(const std::string &sessionId, SessionManager *sessionManager, int maxAge = 3600); // 默认一个小时过期
 
     const std::string& getId() const
     { return sessionId_; }
