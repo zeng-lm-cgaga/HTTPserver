@@ -74,7 +74,7 @@ public:
     void setContentLength(uint64_t length)
     { contentlength_ = length; }
 
-    uint64_t contentlength() const
+    uint64_t contentLength() const
     { return contentlength_; }
 
     void swap(HttpRequest& that);
