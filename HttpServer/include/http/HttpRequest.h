@@ -88,6 +88,6 @@ private:
     muduo::Timestamp                                receiveTime_; // 接收时间
     std::map<std::string, std::string>              headers_; // 请求头
     std::string                                     content_; // 请求体
-    uint64_t                                        contentlength_{0}; // 请求体长度
+    uint64_t                                        contentLength_{0}; // 请求体长度
 };
 }
