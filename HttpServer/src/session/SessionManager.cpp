@@ -67,7 +67,7 @@ namespace session
     std::string SessionManager::getSessionIdFromCookie(const HttpRequest& req)
     {
         std::string sessionId;
-        std::string cookie = req.getHeader("cookie");
+        std::string cookie = req.getHeader("Cookie");
 
         if(!cookie.empty())
         {
