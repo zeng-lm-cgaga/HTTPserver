@@ -1,16 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
-    <title>404 Not Found</title>
+    <title>404 Not Found - 超级无敌宇宙miniGomoku</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: radial-gradient(circle at top, #0f172a 0, #020617 40%, #020309 100%);
+            color: #e5edff;
+        }
+
+        .code {
+            font-size: 80px;
+            font-weight: 800;
+            letter-spacing: 10px;
+            background: linear-gradient(120deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+
+        .desc {
+            font-size: 14px;
+            color: #9ca3af;
+            margin-bottom: 18px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #38bdf8, #6366f1);
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn:hover {
+            filter: brightness(1.05);
+        }
+    </style>
 </head>
 
-<body backgroundcolor="white">
-    <center>
-        <h1>404 Not Found</h1>
-    </center>
-    <hr>
+<body>
+    <div class="code">404</div>
+    <div class="title">页面走丢了</div>
+    <div class="desc">您访问的资源不存在，或已被移动。</div>
+    <button class="btn" onclick="window.location.href='/entry'">返回登录页</button>
 </body>
 
 </html>

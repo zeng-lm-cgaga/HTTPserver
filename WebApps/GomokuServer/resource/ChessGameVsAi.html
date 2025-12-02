@@ -4,26 +4,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡码五子棋</title>
+    <title>超级无敌宇宙miniGomoku</title>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         /* 全局样式 */
         body {
-            font-family: Arial, sans-serif;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
-            background-color: #f8f8f8;
+            background: radial-gradient(circle at top, #0f172a 0, #020617 40%, #020309 100%);
             position: relative;
+            color: #e5edff;
+            overflow: hidden;
+        }
+
+        /* 背景装饰 */
+        .board-glow {
+            position: absolute;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(234, 179, 8, 0.35), transparent 70%);
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            filter: blur(10px);
+            z-index: 0;
+        }
+
+        .side-glow {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: conic-gradient(from 140deg, rgba(56, 189, 248, 0.3), transparent, rgba(129, 140, 248, 0.5));
+            right: -120px;
+            bottom: -80px;
+            filter: blur(40px);
+            opacity: 0.7;
         }
 
         /* 标题样式 */
         h1 {
-            margin-bottom: 20px;
-            color: #333;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            margin-bottom: 18px;
+            color: #e5edff;
+            text-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+            letter-spacing: 3px;
+            font-size: 28px;
+            z-index: 1;
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-top: -6px;
+            margin-bottom: 10px;
+            z-index: 1;
+        }
+
+        /* 游戏控制区样式 */
+        .game-container {
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+            z-index: 1;
+            gap: 28px;
+            padding: 18px 24px 22px;
+            border-radius: 22px;
+            background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), rgba(15, 23, 42, 0.98));
+            box-shadow:
+                0 32px 70px rgba(15, 23, 42, 0.95),
+                0 0 0 1px rgba(148, 163, 255, 0.32);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
         }
 
         /* 棋盘样式 */
@@ -31,20 +93,34 @@
             display: grid;
             grid-template-columns: repeat(15, 40px);
             grid-template-rows: repeat(15, 40px);
-            gap: 0px;
-            border: 2px solid #333;
-            background-color: #DEB887;
+            gap: 0;
+            border-radius: 18px;
+            border: 1px solid rgba(15, 23, 42, 0.9);
+            background: linear-gradient(145deg, #e6c087, #d0a96c);
+            box-shadow:
+                inset 0 0 0 1px rgba(0, 0, 0, 0.18),
+                0 20px 40px rgba(15, 23, 42, 0.9);
             position: relative;
-            margin: 20px auto;
+            margin: 6px auto 12px;
         }
 
         .cell {
             width: 40px;
             height: 40px;
-            border: 1px solid #666;
+            border: 1px solid rgba(87, 65, 36, 0.7);
             position: relative;
             cursor: pointer;
-            box-sizing: border-box;
+        }
+
+        .cell::before {
+            /* 细微高光 */
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: 2px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 40%, rgba(0, 0, 0, 0.05));
+            opacity: 0.4;
+            pointer-events: none;
         }
 
         .cell.black::after,
@@ -57,77 +133,147 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
         }
 
         .cell.black::after {
-            background-color: #000;
+            background: radial-gradient(circle at 25% 20%, #555, #000);
         }
 
         .cell.white::after {
-            background-color: #fff;
+            background: radial-gradient(circle at 25% 20%, #fff, #d1d5db);
             border: 1px solid #000;
         }
 
         /* 胜负结果提示框 */
         #result {
-            margin-top: 10px;
-            font-size: 20px;
-            color: red;
-            font-weight: bold;
+            margin-top: 6px;
+            font-size: 16px;
+            color: #f97316;
+            font-weight: 600;
+            text-align: center;
+            min-height: 20px;
         }
 
-        /* 游戏控制区样式 */
-        .game-container {
-            display: flex;
-            align-items: flex-start;
-            position: relative;
-        }
-
+        /* 右侧控制面板 */
         .control-panel {
-            position: absolute;
-            left: 100%;
-            margin-left: 30px;
+            min-width: 180px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            top: 20px;
+            margin-top: 8px;
+        }
+
+        .panel-title {
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #c7d2fe;
+        }
+
+        .turn-indicator {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: radial-gradient(circle at left, rgba(34, 197, 94, 0.35), rgba(15, 23, 42, 0.98));
+            border: 1px solid rgba(34, 197, 94, 0.6);
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .turn-indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.45);
         }
 
         .control-btn {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 9px 16px;
+            font-size: 14px;
             cursor: pointer;
-            background-color: #4CAF50;
+            background: linear-gradient(135deg, #4ade80, #16a34a);
             color: white;
             border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+            border-radius: 999px;
+            transition: all 0.18s ease;
+            box-shadow: 0 12px 30px rgba(22, 163, 74, 0.45);
+            text-align: center;
         }
 
         .control-btn:hover {
-            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 16px 38px rgba(22, 163, 74, 0.55);
+        }
+
+        .control-btn:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.95);
         }
 
         .control-btn.return {
-            background-color: #f44336;
+            background: linear-gradient(135deg, #f97373, #ef4444);
+            box-shadow: 0 12px 30px rgba(239, 68, 68, 0.45);
         }
 
         .control-btn.return:hover {
-            background-color: #da190b;
+            box-shadow: 0 16px 38px rgba(239, 68, 68, 0.6);
+        }
+
+        /* 中央浮层：胜利提示 */
+        #winner-display {
+            font-size: 24px;
+            color: #f97316;
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(15, 23, 42, 0.96);
+            padding: 22px 30px;
+            border-radius: 16px;
+            box-shadow:
+                0 28px 60px rgba(15, 23, 42, 1),
+                0 0 0 1px rgba(248, 250, 252, 0.04);
+            z-index: 10;
+        }
+
+        /* AI 思考提示 */
+        #thinking-message {
+            font-size: 18px;
+            color: #38bdf8;
+            display: none;
+            position: absolute;
+            top: 16%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.7);
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.9);
+            z-index: 9;
+        }
+
+        /* 加载动画容器 */
+        #loading-animation {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9;
         }
 
         .loader {
-            border: 8px solid #f3f3f3;
-            /* Light grey */
-            border-top: 8px solid #3498db;
-            /* Blue */
+            border: 6px solid #111827;
+            border-top: 6px solid #38bdf8;
             border-radius: 50%;
             width: 40px;
-            /* Size of the loader */
             height: 40px;
-            /* Size of the loader */
             animation: spin 1s linear infinite;
-            /* Animation */
         }
 
         @keyframes spin {
@@ -139,42 +285,65 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* 小屏幕适配 */
+        @media (max-width: 900px) {
+            body {
+                padding: 12px;
+            }
+
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+                padding: 14px 14px 18px;
+            }
+
+            .control-panel {
+                width: 100%;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <!-- 背景光效 -->
+    <div class="board-glow"></div>
+    <div class="side-glow"></div>
+
     <!-- 标题 -->
-    <h1>卡码五子棋</h1>
+    <h1>超级无敌宇宙miniGomoku</h1>
+    <div class="page-subtitle">您执黑先行，对战智能 AI</div>
 
     <!-- 游戏容器 -->
     <div class="game-container">
         <!-- 棋盘 -->
-        <div id="board"></div>
+        <div>
+            <div id="board"></div>
+            <!-- 胜负提示 -->
+            <div id="result"></div>
+        </div>
 
         <!-- 控制面板 -->
         <div class="control-panel">
+            <div class="panel-title">对局控制</div>
+            <div class="turn-indicator">
+                <span class="turn-indicator-dot"></span>
+                <span>当前轮到：玩家（黑子）</span>
+            </div>
             <button class="control-btn" onclick="restartGame()">重新开始</button>
             <button class="control-btn return" onclick="returnToMenu()">返回菜单</button>
         </div>
     </div>
 
-    <!-- 胜负提示 -->
-    <div id="result"></div>
+    <!-- 中央提示层 -->
+    <div id="winner-display">恭喜你，获胜了！</div>
 
-    <!-- 在 HTML 中添加一个用于显示获胜方的元素 -->
-    <div id="winner-display"
-        style="font-size: 24px; color: red; display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(255, 255, 255, 0.8); padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);">
-        恭喜你，获胜了！
-    </div>
+    <!-- AI 思考提示 -->
+    <div id="thinking-message">AI 正在思考中，请稍候…</div>
 
-    <!-- 在 HTML 中添加一个用于显示思考提示的元素 -->
-    <div id="thinking-message"
-        style="font-size: 20px; color: blue; display: none; position: absolute; top: 45%; left: 50%; transform: translateX(-50%);">
-        AI正在思考中，请等待...
-    </div>
-
-    <div id="loading-animation"
-        style="display: none; position: absolute; top: 50%; left: 50%; transform: translateX(-50%);">
+    <!-- 加载动画 -->
+    <div id="loading-animation">
         <div class="loader"></div>
     </div>
 
@@ -361,7 +530,7 @@
             // 显示加载状态
             document.body.innerHTML = `
                 <div id="loading-container">
-                    <div id="loading-title">卡码五子棋</div>
+                    <div id="loading-title">超级无敌宇宙miniGomoku</div>
                     <div class="progress-bar">
                         <div class="progress"></div>
                     </div>
@@ -423,21 +592,21 @@
                 align-items: center;
                 height: 100vh;
                 text-align: center;
-                background-color: #1e1e2f;
+                background-color: #0f172a;
+                color: #e5edff;
             }
 
             #loading-title {
                 font-size: 2em;
                 margin-bottom: 20px;
-                color: #00c3ff;
-                text-shadow: 0 0 5px #00c3ff, 0 0 10px #008bff;
+                color: #e5edff;
             }
 
             .progress-bar {
-                width: 300px;
+                width: 260px;
                 height: 10px;
-                background-color: #2a2a3c;
-                border-radius: 5px;
+                background-color: #111827;
+                border-radius: 999px;
                 overflow: hidden;
                 margin: 20px 0;
             }
@@ -445,13 +614,13 @@
             .progress {
                 width: 100%;
                 height: 100%;
-                background: linear-gradient(90deg, #00c3ff, #008bff);
+                background: linear-gradient(90deg, #38bdf8, #6366f1);
                 animation: progress 2s ease-in-out infinite;
             }
 
             #loading-text {
-                color: #fff;
-                font-size: 1.2em;
+                color: #9ca3af;
+                font-size: 0.95em;
             }
 
             @keyframes progress {
