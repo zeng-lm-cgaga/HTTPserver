@@ -26,7 +26,7 @@ void MenuHandler::handle(const http::HttpRequest &req, http::HttpResponse *resp)
         int userId = std::stoi(session->getValue("userId"));
         std::string username = session->getValue("username");
 
-        std::string reqFile("../WebApps/GomokuServer/resource/menu.html");
+        std::string reqFile("WebApps/GomokuServer/resource/menu.html");
         FileUtil fileOperater(reqFile);
         if (!fileOperater.isValid())
         {

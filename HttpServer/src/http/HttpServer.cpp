@@ -158,7 +158,22 @@ void HttpServer::onRequest(const muduo::net::TcpConnectionPtr &conn, const HttpR
     // 打印完整的响应内容用于调试
     LOG_INFO << "Sending response:\n" << buf.toStringPiece().as_string();
 
-    conn->send(&buf);
+    if (useSSL_)
+    {
+        auto it = sslConns_.find(conn);
+        if (it != sslConns_.end())
+        {
+            it->second->send(buf.peek(), buf.readableBytes());
+        }
+        else
+        {
+            conn->send(&buf);
+        }
+    }
+    else
+    {
+        conn->send(&buf);
+    }
     // 如果是短连接的话，返回响应报文后就断开连接
     if (response.closeConnection())
     {

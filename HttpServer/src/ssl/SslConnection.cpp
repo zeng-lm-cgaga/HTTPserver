@@ -5,6 +5,30 @@
 namespace ssl
 {
 
+static void flushWriteBio(BIO* writeBio, const SslConnection::TcpConnectionPtr& conn)
+{
+    if (!writeBio || !conn)
+    {
+        return;
+    }
+
+    char outBuf[4096];
+    int pending;
+    while ((pending = BIO_pending(writeBio)) > 0)
+    {
+        int bytes = BIO_read(writeBio, outBuf,
+                             std::min(pending, static_cast<int>(sizeof(outBuf))));
+        if (bytes > 0)
+        {
+            conn->send(outBuf, bytes);
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+
 // 自定义 BIO 方法
 static BIO_METHOD* createCustomBioMethod() 
 {
@@ -49,10 +73,6 @@ SslConnection::SslConnection(const TcpConnectionPtr& conn, SslContext* ctx)
     SSL_set_mode(ssl_, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
     SSL_set_mode(ssl_, SSL_MODE_ENABLE_PARTIAL_WRITE);
     
-    // 设置连接回调
-    conn_->setMessageCallback(
-        std::bind(&SslConnection::onRead, this, std::placeholders::_1,
-                 std::placeholders::_2, std::placeholders::_3));
 }
 
 SslConnection::~SslConnection() 
@@ -99,22 +119,47 @@ void SslConnection::onRead(const TcpConnectionPtr& conn, BufferPtr buf,
 {
     if (state_ == SSLState::HANDSHAKE) {
         // 将数据写入 BIO
-        BIO_write(readBio_, buf->peek(), buf->readableBytes());
-        buf->retrieve(buf->readableBytes());
+        if (buf->readableBytes() > 0)
+        {
+            BIO_write(readBio_, buf->peek(), buf->readableBytes());
+            buf->retrieve(buf->readableBytes());
+        }
         handleHandshake();
         return;
     } else if (state_ == SSLState::ESTABLISHED) {
-        // 解密数据
-        char decryptedData[4096];
-        int ret = SSL_read(ssl_, decryptedData, sizeof(decryptedData));
-        if (ret > 0) {
-            // 创建新的 Buffer 存储解密后的数据
-            muduo::net::Buffer decryptedBuffer;
-            decryptedBuffer.append(decryptedData, ret);
-            
-            // 调用上层回调处理解密后的数据
-            if (messageCallback_) {
-                messageCallback_(conn, &decryptedBuffer, time);
+        if (buf->readableBytes() > 0)
+        {
+            BIO_write(readBio_, buf->peek(), buf->readableBytes());
+            buf->retrieve(buf->readableBytes());
+        }
+
+        // 解密数据并写入解密缓冲区
+        while (true)
+        {
+            char decryptedData[4096];
+            int ret = SSL_read(ssl_, decryptedData, sizeof(decryptedData));
+            if (ret > 0)
+            {
+                decryptedBuffer_.append(decryptedData, ret);
+                continue;
+            }
+
+            int err = SSL_get_error(ssl_, ret);
+            if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+            {
+                break;
+            }
+
+            if (err == SSL_ERROR_ZERO_RETURN)
+            {
+                conn_->shutdown();
+                break;
+            }
+
+            if (ret <= 0)
+            {
+                handleError(getLastError(ret));
+                break;
             }
         }
     }
@@ -123,6 +168,7 @@ void SslConnection::onRead(const TcpConnectionPtr& conn, BufferPtr buf,
 void SslConnection::handleHandshake() 
 {
     int ret = SSL_do_handshake(ssl_);
+    flushWriteBio(writeBio_, conn_);
     
     if (ret == 1) {
         state_ = SSLState::ESTABLISHED;
@@ -174,6 +220,8 @@ SSLError SslConnection::getLastError(int ret)
     {
         case SSL_ERROR_NONE:
             return SSLError::NONE;
+        case SSL_ERROR_ZERO_RETURN:
+            return SSLError::NONE;
         case SSL_ERROR_WANT_READ:
             return SSLError::WANT_READ;
         case SSL_ERROR_WANT_WRITE:
@@ -198,10 +246,22 @@ void SslConnection::handleError(SSLError error)
         case SSLError::SSL:
         case SSLError::SYSCALL:
         case SSLError::UNKNOWN:
-            LOG_ERROR << "SSL error occurred: " << ERR_error_string(ERR_get_error(), nullptr);
+        {
+            unsigned long errCode = ERR_get_error();
+            if (errCode != 0)
+            {
+                char errBuf[256];
+                ERR_error_string_n(errCode, errBuf, sizeof(errBuf));
+                LOG_ERROR << "SSL error occurred: " << errBuf;
+            }
+            else
+            {
+                LOG_ERROR << "SSL error occurred: unknown";
+            }
             state_ = SSLState::ERROR;
             conn_->shutdown();
             break;
+        }
         default:
             break;
     }

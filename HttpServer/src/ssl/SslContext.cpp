@@ -100,24 +100,29 @@ bool SslContext::loadCertificates()
 
 bool SslContext::setupProtocol()
 {
-    // 设置 SSL/TLS 协议版本
-    long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+    // 设置 SSL/TLS 最低协议版本
+    int minVersion = TLS1_2_VERSION;
     switch (config_.getProtocolVersion())
     {
         case SSLVersion::TLS_1_0:
-            options |= SSL_OP_NO_TLSv1;
+            minVersion = TLS1_VERSION;
             break;
         case SSLVersion::TLS_1_1:
-            options |= SSL_OP_NO_TLSv1_1;
+            minVersion = TLS1_1_VERSION;
             break;
         case SSLVersion::TLS_1_2:
-            options |= SSL_OP_NO_TLSv1_2;
+            minVersion = TLS1_2_VERSION;
             break;
         case SSLVersion::TLS_1_3:
-            options |= SSL_OP_NO_TLSv1_3;
+            minVersion = TLS1_3_VERSION;
             break;
     }
-    SSL_CTX_set_options(ctx_, options);
+
+    if (SSL_CTX_set_min_proto_version(ctx_, minVersion) != 1)
+    {
+        handleSslError("Failed to set minimum protocol version");
+        return false;
+    }
     
     // 设置加密套件
     if (!config_.getCipherList().empty())

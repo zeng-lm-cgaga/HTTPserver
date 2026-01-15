@@ -4,7 +4,7 @@ void GameBackendHandler::handle(const http::HttpRequest& req, http::HttpResponse
 {
     // 后台界面
     // 获取当前在线人数、历史最高在线人数、数据库中已注册用户总数
-    std::string reqFile("../WebApps/GomokuServer/resource/Backend.html");
+    std::string reqFile("WebApps/GomokuServer/resource/Backend.html");
     FileUtil fileOperater(reqFile);
     if (!fileOperater.isValid())
     {

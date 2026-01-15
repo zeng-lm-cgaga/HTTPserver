@@ -33,6 +33,13 @@ void GomokuServer::start()
 
 void GomokuServer::initialize()
 {
+    // 初始化 SSL 配置
+    httpServer_.enableSSL(true);
+    ssl::SslConfig sslConfig;
+    sslConfig.setCertificateFile("certs/server.crt");
+    sslConfig.setPrivateKeyFile("certs/server.key");
+    httpServer_.setSslConfig(sslConfig);
+
     // 初始化数据库连接池
     http::MysqlUtil::init("tcp://127.0.0.1:3306", "root", "root", "Gomoku", 10);
     // 初始化会话
