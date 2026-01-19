@@ -107,9 +107,9 @@ for(size_t i = 0; i < poolsize; ++i)
 ```
 
 **Performance Improvement:**
-- Connection creation time: 100-500ms
+- Connection creation time: 100-500ms (including TCP handshake, MySQL authentication, etc.)
 - Get connection from pool: < 1ms
-- **Performance boost: 100-500x**
+- **Theoretical performance boost: 100-500x** (in high concurrency scenarios)
 
 #### Optimization 2: Condition Variable + Wait Queue
 ```cpp
@@ -125,7 +125,7 @@ while(connections_.empty())
 **Why not busy waiting?**
 - Busy waiting consumes 100% CPU
 - Condition variable puts thread to sleep, CPU usage near 0
-- **CPU efficiency improvement: infinite**
+- **CPU usage: Reduced from 100% to near 0%**
 
 #### Optimization 3: Connection Health Check (Heartbeat)
 ```cpp
@@ -493,7 +493,7 @@ void reset()
 | unordered_map | Router | 10x | Frequent lookups |
 | Reactor Pattern | HttpServer | 6x (8 threads) | High concurrency network |
 | Move Semantics | Global | 10-100x | Large object passing |
-| Condition Variable | Connection Pool | ∞ (avoid busy wait) | Thread synchronization |
+| Condition Variable | Connection Pool | CPU 0% vs 100% | Thread synchronization |
 | Smart Pointers | Global | Avoid leaks | Memory management |
 | RAII | Global | Exception safety | Resource management |
 
@@ -507,7 +507,7 @@ void reset()
 | Route lookup | 10µs | 1µs | 10x |
 | QPS | 10,000 | 60,000 | 6x |
 | CPU usage | 90% | 60% | 1.5x |
-| Memory leaks | Frequent | Zero | ∞ |
+| Memory leaks | Frequent | Zero | Eliminated |
 
 ---
 
