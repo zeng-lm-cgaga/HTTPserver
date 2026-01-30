@@ -525,10 +525,9 @@
                     // Check for 401 Unauthorized status
                     if (response.status === 401) {
                         // Session expired or not logged in, redirect to login page
+                        // The redirect will interrupt execution, so no need to reject promise
                         window.location.replace('/entry');
-                        const error = new Error('Unauthorized');
-                        error.isUnauthorized = true;
-                        return Promise.reject(error);
+                        return new Promise(() => {}); // Return a never-resolving promise to prevent further processing
                     }
                     return response.json();
                 })
@@ -595,10 +594,7 @@
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
-                    // Don't show alert for Unauthorized error since we're redirecting
-                    if (!error.isUnauthorized) {
-                        alert('网络请求失败: ' + error.message);
-                    }
+                    alert('网络请求失败: ' + error.message);
                     isThinking = false;
                     hideThinkingMessage();
                 });
@@ -701,10 +697,9 @@
                     // Check for 401 Unauthorized status
                     if (response.status === 401) {
                         // Session expired or not logged in, redirect to login page
+                        // The redirect will interrupt execution, so no need to reject promise
                         window.location.replace('/entry');
-                        const error = new Error('Unauthorized');
-                        error.isUnauthorized = true;
-                        return Promise.reject(error);
+                        return new Promise(() => {}); // Return a never-resolving promise to prevent further processing
                     }
                     if (!response.ok) {
                         throw new Error('返回菜单失败');
@@ -734,12 +729,9 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    // Don't show alert for Unauthorized error since we're redirecting
-                    if (!error.isUnauthorized) {
-                        alert('返回菜单失败，请重试！');
-                        // 恢复游戏界面
-                        location.reload();
-                    }
+                    alert('返回菜单失败，请重试！');
+                    // 恢复游戏界面
+                    location.reload();
                 });
         }
 
