@@ -521,7 +521,15 @@
                 credentials: 'include',
                 body: JSON.stringify({ x, y })
             })
-                .then(response => response.json())
+                .then(response => {
+                    // Check for 401 Unauthorized status
+                    if (response.status === 401) {
+                        // Session expired or not logged in, redirect to login page
+                        window.location.replace('/entry');
+                        return Promise.reject(new Error('Unauthorized'));
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('move response', data);
                     isThinking = false; // 重置思考状态
@@ -585,7 +593,10 @@
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
-                    alert('网络请求失败: ' + error.message);
+                    // Don't show alert for Unauthorized error since we're redirecting
+                    if (error.message !== 'Unauthorized') {
+                        alert('网络请求失败: ' + error.message);
+                    }
                     isThinking = false;
                     hideThinkingMessage();
                 });
@@ -685,6 +696,12 @@
                 }
             })
                 .then(response => {
+                    // Check for 401 Unauthorized status
+                    if (response.status === 401) {
+                        // Session expired or not logged in, redirect to login page
+                        window.location.replace('/entry');
+                        return Promise.reject(new Error('Unauthorized'));
+                    }
                     if (!response.ok) {
                         throw new Error('返回菜单失败');
                     }
@@ -713,9 +730,12 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('返回菜单失败，请重试！');
-                    // 恢复游戏界面
-                    location.reload();
+                    // Don't show alert for Unauthorized error since we're redirecting
+                    if (error.message !== 'Unauthorized') {
+                        alert('返回菜单失败，请重试！');
+                        // 恢复游戏界面
+                        location.reload();
+                    }
                 });
         }
 
