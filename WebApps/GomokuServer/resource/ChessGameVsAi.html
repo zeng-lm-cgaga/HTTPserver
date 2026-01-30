@@ -521,7 +521,16 @@
                 credentials: 'include',
                 body: JSON.stringify({ x, y })
             })
-                .then(response => response.json())
+                .then(response => {
+                    // Check for 401 Unauthorized status
+                    if (response.status === 401) {
+                        // Session expired or not logged in, redirect to login page
+                        // The redirect will interrupt execution, so no need to reject promise
+                        window.location.replace('/entry');
+                        return new Promise(() => {}); // Return a never-resolving promise to prevent further processing
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('move response', data);
                     isThinking = false; // 重置思考状态
@@ -559,6 +568,8 @@
 
                     if (data.status === 'error') {
                         // 如果服务器返回错误，回滚前端的改动
+                        // Note: This is a fallback check. The HTTP 401 status is checked above (line 526),
+                        // but this handles edge cases where server returns 200 with error payload
                         if (data.message === 'Unauthorized') {
                             // 会话失效，直接重定向到登录页，不弹窗打断用户
                             // 使用 replace 避免用户点后退按钮陷入死循环
@@ -685,6 +696,13 @@
                 }
             })
                 .then(response => {
+                    // Check for 401 Unauthorized status
+                    if (response.status === 401) {
+                        // Session expired or not logged in, redirect to login page
+                        // The redirect will interrupt execution, so no need to reject promise
+                        window.location.replace('/entry');
+                        return new Promise(() => {}); // Return a never-resolving promise to prevent further processing
+                    }
                     if (!response.ok) {
                         throw new Error('返回菜单失败');
                     }
