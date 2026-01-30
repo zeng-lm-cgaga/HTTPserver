@@ -817,13 +817,13 @@
         });
 
         // 确保在页面加载时从 sessionStorage 获取 userId
-        document.addEventListener('DOMContentLoaded', function () {
-            const userId = sessionStorage.getItem('userId');
-            if (!userId) {
+        //document.addEventListener('DOMContentLoaded', function () {
+          //  const userId = sessionStorage.getItem('userId');
+            //if (!userId) {
                 // 如果没有 userId，重定向到登录页面
-                window.location.href = '/entry';
-            }
-        });
+              //  window.location.href = '/entry';
+           // }
+        //});
 
         // 显示思考提示和加载动画
         function showThinkingMessage() {
