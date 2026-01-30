@@ -526,7 +526,9 @@
                     if (response.status === 401) {
                         // Session expired or not logged in, redirect to login page
                         window.location.replace('/entry');
-                        return Promise.reject(new Error('Unauthorized'));
+                        const error = new Error('Unauthorized');
+                        error.isUnauthorized = true;
+                        return Promise.reject(error);
                     }
                     return response.json();
                 })
@@ -594,7 +596,7 @@
                 .catch(error => {
                     console.error('Fetch error:', error);
                     // Don't show alert for Unauthorized error since we're redirecting
-                    if (error.message !== 'Unauthorized') {
+                    if (!error.isUnauthorized) {
                         alert('网络请求失败: ' + error.message);
                     }
                     isThinking = false;
@@ -700,7 +702,9 @@
                     if (response.status === 401) {
                         // Session expired or not logged in, redirect to login page
                         window.location.replace('/entry');
-                        return Promise.reject(new Error('Unauthorized'));
+                        const error = new Error('Unauthorized');
+                        error.isUnauthorized = true;
+                        return Promise.reject(error);
                     }
                     if (!response.ok) {
                         throw new Error('返回菜单失败');
@@ -731,7 +735,7 @@
                 .catch(error => {
                     console.error('Error:', error);
                     // Don't show alert for Unauthorized error since we're redirecting
-                    if (error.message !== 'Unauthorized') {
+                    if (!error.isUnauthorized) {
                         alert('返回菜单失败，请重试！');
                         // 恢复游戏界面
                         location.reload();
