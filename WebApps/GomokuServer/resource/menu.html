@@ -356,6 +356,7 @@
             }, 2000); // 2秒后强制显示菜单
         });
 
+
         // 退出游戏 - 关闭网页
         document.getElementById('exit-game').addEventListener('click', function () {
             const userId = sessionStorage.getItem('userId');
@@ -412,37 +413,6 @@
             // 链接自身会导航到 /entry
         });
 
-        // 添加页面刷新/关闭时的处理
-        window.addEventListener('beforeunload', function (e) {
-            const userId = sessionStorage.getItem('userId');
-            if (userId) {
-                try {
-                    // 创建 Blob 对象，指定 content-type
-                    const data = new Blob([JSON.stringify({
-                        userId: userId,
-                        type: 'refresh',
-                        gameType: 0
-                    })], { type: 'application/json' });
-
-                    // 使用 navigator.sendBeacon 发送异步请求
-                    const success = navigator.sendBeacon('/user/logout', data);
-
-                    // 如果 sendBeacon 失败，尝试使用同步 XMLHttpRequest
-                    if (!success) {
-                        const xhr = new XMLHttpRequest();
-                        xhr.open('POST', '/user/logout', false); // 同步请求
-                        xhr.setRequestHeader('Content-Type', 'application/json');
-                        xhr.send(JSON.stringify({
-                            userId: userId,
-                            type: 'refresh',
-                            gameType: 0
-                        }));
-                    }
-                } catch (error) {
-                    console.error('Logout error:', error);
-                }
-            }
-        });
 
         // 添加页面加载时的用户检查
         window.addEventListener('load', function () {

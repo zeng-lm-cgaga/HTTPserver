@@ -36,45 +36,28 @@ void LoginHandler::handle(const http::HttpRequest &req, http::HttpResponse *resp
             session->setValue("userId", std::to_string(userId));
             session->setValue("username", username);
             session->setValue("isLoggedIn", "true");
-            if (server_->onlineUsers_.find(userId) == server_->onlineUsers_.end() || server_->onlineUsers_[userId] == false)
+            
+            // 允许重复登录，更新在线状态
             {
-                {
-                    std::lock_guard<std::mutex> lock(server_->mutexForOnlineUsers_);
-                    server_->onlineUsers_[userId] = true;
-                }
-                
-                // 更新历史最高在线人数
-                server_->updateMaxOnline(server_->onlineUsers_.size());
-                // 用户存在登录成功
-                // 封装json 数据。
-                json successResp;
-                successResp["success"] = true;
-                successResp["userId"] = userId;
-                std::string successBody = successResp.dump(4);
-
-                resp->setStatusLine(req.getVersion(), http::HttpResponse::k200Ok, "OK");
-                resp->setCloseConnection(false);
-                resp->setContentType("application/json");
-                resp->setContentLength(successBody.size());
-                resp->setBody(successBody);
-                return;
+                std::lock_guard<std::mutex> lock(server_->mutexForOnlineUsers_);
+                server_->onlineUsers_[userId] = true;
             }
-            else
-            {
-                // FIXME: 当前该用户正在其他地方登录中，将原有登录用户强制下线更好
-                // 不允许重复登录，
-                json failureResp;
-                failureResp["success"] = false;
-                failureResp["error"] = "账号已在其他地方登录";
-                std::string failureBody = failureResp.dump(4);
+            
+            // 更新历史最高在线人数
+            server_->updateMaxOnline(server_->onlineUsers_.size());
+            // 用户存在登录成功
+            // 封装json 数据。
+            json successResp;
+            successResp["success"] = true;
+            successResp["userId"] = userId;
+            std::string successBody = successResp.dump(4);
 
-                resp->setStatusLine(req.getVersion(), http::HttpResponse::k403Forbidden, "Forbidden");
-                resp->setCloseConnection(true);
-                resp->setContentType("application/json");
-                resp->setContentLength(failureBody.size());
-                resp->setBody(failureBody);
-                return;
-            }
+            resp->setStatusLine(req.getVersion(), http::HttpResponse::k200Ok, "OK");
+            resp->setCloseConnection(false);
+            resp->setContentType("application/json");
+            resp->setContentLength(successBody.size());
+            resp->setBody(successBody);
+            return;
         }
         else // 账号密码错误，请重新登录
         {

@@ -522,12 +522,13 @@
                 body: JSON.stringify({ x, y })
             })
                 .then(response => {
-                    // Check for 401 Unauthorized status
-                    if (response.status === 401) {
-                        // Session expired or not logged in, redirect to login page
-                        // The redirect will interrupt execution, so no need to reject promise
-                        window.location.replace('/entry');
-                        return new Promise(() => {}); // Return a never-resolving promise to prevent further processing
+                    if (!response.ok) {
+                        return response.json()
+                            .catch(() => ({}))
+                            .then(payload => {
+                                const msg = payload.message || ('请求失败: ' + response.status);
+                                throw new Error(msg);
+                            });
                     }
                     return response.json();
                 })
@@ -567,16 +568,14 @@
                     }
 
                     if (data.status === 'error') {
-                        // 如果服务器返回错误，回滚前端的改动
-                        // Note: This is a fallback check. The HTTP 401 status is checked above (line 526),
-                        // but this handles edge cases where server returns 200 with error payload
-                        if (data.message === 'Unauthorized') {
-                            // 会话失效，直接重定向到登录页，不弹窗打断用户
-                            // 使用 replace 避免用户点后退按钮陷入死循环
-                            window.location.replace('/entry'); 
-                            return;
-                        }
-                        alert(data.message);
+                        const msg = data.message || '请求失败';
+                        const res = document.getElementById('result');
+                        if (res) res.textContent = msg;
+                        alert(msg);
+                        // 回滚前端落子
+                        cell.classList.remove('black');
+                        gameState.boardState[x][y] = 'empty';
+                        gameState.currentPlayer = 'black';
                         return;
                     }
 
@@ -596,7 +595,14 @@
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
-                    alert('网络请求失败: ' + error.message);
+                    const msg = error.message || '网络请求失败';
+                    const res = document.getElementById('result');
+                    if (res) res.textContent = msg;
+                    alert(msg);
+                    // 回滚前端落子
+                    cell.classList.remove('black');
+                    gameState.boardState[x][y] = 'empty';
+                    gameState.currentPlayer = 'black';
                     isThinking = false;
                     hideThinkingMessage();
                 });
@@ -686,55 +692,10 @@
                 </div>
             `;
 
-            // 清理游戏状态
-            gameState.reset();
-
-            fetch('/menu', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'text/html'
-                }
-            })
-                .then(response => {
-                    // Check for 401 Unauthorized status
-                    if (response.status === 401) {
-                        // Session expired or not logged in, redirect to login page
-                        // The redirect will interrupt execution, so no need to reject promise
-                        window.location.replace('/entry');
-                        return new Promise(() => {}); // Return a never-resolving promise to prevent further processing
-                    }
-                    if (!response.ok) {
-                        throw new Error('返回菜单失败');
-                    }
-                    return response.text();
-                })
-                .then(html => {
-                    // 使用 document.open/write/close 完全重置页面
-                    document.open();
-                    document.write(html);
-                    document.close();
-
-                    // 确保在页面加载完成后重新绑定事件
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const playAiButton = document.getElementById('play-ai');
-                            if (playAiButton) {
-                                playAiButton.addEventListener('click', startAiGame);
-                            }
-                        });
-                    } else {
-                        const playAiButton = document.getElementById('play-ai');
-                        if (playAiButton) {
-                            playAiButton.addEventListener('click', startAiGame);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('返回菜单失败，请重试！');
-                    // 恢复游戏界面
-                    location.reload();
-                });
+            // 简单延迟后跳转，确保UI渲染
+            setTimeout(() => {
+                window.location.href = '/menu';
+            }, 50);
         }
 
         // 添加必要的加载状态样式
@@ -818,21 +779,6 @@
         boot();
         window.onload = function () { try { boot(); } catch (e) {} };
 
-        // 添加页面刷新/关闭时的处理
-        window.addEventListener('beforeunload', function (e) {
-            const userId = sessionStorage.getItem('userId');
-            if (userId) {
-                // 创建 Blob 对象，指定 content-type
-                const data = new Blob([JSON.stringify({
-                    userId: userId,
-                    type: 'refresh',
-                    gameType: 0
-                })], { type: 'application/json' });  // 设置正确的 Content-Type
-
-                // 使用 navigator.sendBeacon 发送异步请求
-                navigator.sendBeacon('/user/logout', data);
-            }
-        });
 
         // 确保在页面加载时从 sessionStorage 获取 userId
         //document.addEventListener('DOMContentLoaded', function () {
