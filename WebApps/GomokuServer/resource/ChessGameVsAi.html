@@ -102,6 +102,8 @@
                 0 20px 40px rgba(15, 23, 42, 0.9);
             position: relative;
             margin: 6px auto 12px;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .cell {
@@ -110,6 +112,8 @@
             border: 1px solid rgba(87, 65, 36, 0.7);
             position: relative;
             cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .cell::before {
@@ -162,6 +166,15 @@
             flex-direction: column;
             gap: 10px;
             margin-top: 8px;
+        }
+
+        .difficulty-display {
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid rgba(148, 163, 255, 0.4);
+            font-size: 13px;
+            color: #e5edff;
         }
 
         .panel-title {
@@ -220,6 +233,16 @@
 
         .control-btn.return:hover {
             box-shadow: 0 16px 38px rgba(239, 68, 68, 0.6);
+        }
+
+        .control-select {
+            padding: 9px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 255, 0.5);
+            background: rgba(15, 23, 42, 0.85);
+            color: #e5edff;
+            font-size: 14px;
+            outline: none;
         }
 
         /* 中央浮层：胜利提示 */
@@ -331,8 +354,10 @@
                 <span class="turn-indicator-dot"></span>
                 <span>当前轮到：玩家（黑子）</span>
             </div>
-            <button class="control-btn" onclick="restartGame()">重新开始</button>
-            <button class="control-btn return" onclick="returnToMenu()">返回菜单</button>
+            <div id="difficulty-display" class="difficulty-display">本局难度：--</div>
+            <div class="difficulty-display" id="build-version">构建版本：2026-01-31-01</div>
+            <button class="control-btn" id="restart-btn">重新开始</button>
+            <button class="control-btn return" id="return-btn">返回菜单</button>
         </div>
     </div>
 
@@ -368,13 +393,64 @@
             }
         };
 
+        const difficultyState = {
+            current: 'medium'
+        };
+
+        // 轻量点击音效（极短静音占位，避免加载大文件）
+        const sounds = {
+            place: (() => {
+                const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=');
+                a.volume = 0.35;
+                return a;
+            })()
+        };
+
         // 初始化函数
         function initializeGame() {
+            console.log('init game');
             gameState.boardState = Array(15).fill().map(() => Array(15).fill("empty")); // 初始化棋盘状态
             gameState.currentPlayer = 'black'; // 设置当前玩家
             gameState.isGameActive = true; // 设置游戏状态为活动
             createBoard(); // 创建棋盘
             addEventListeners(); // 添加事件监听
+            setupDifficultySelector();
+            ensureDifficultyDisplay();
+            bindControlButtons();
+        }
+
+        function bindControlButtons() {
+            const restartBtn = document.getElementById('restart-btn');
+            const returnBtn = document.getElementById('return-btn');
+            if (restartBtn) restartBtn.addEventListener('click', restartGame);
+            if (returnBtn) returnBtn.addEventListener('click', returnToMenu);
+        }
+
+        // 兜底：如果初始化被阻断，定时检查并补救
+        function ensureBoardReady() {
+            const board = document.getElementById('board');
+            if (!board) return;
+            if (board.children.length < 200) { // 预期 225 个格子
+                console.warn('board not built, rebuilding');
+                createBoard();
+            }
+            if (!board._delegated) {
+                addEventListeners();
+                board._delegated = true;
+            }
+            if (!gameState.boardState || gameState.boardState.length === 0) {
+                gameState.boardState = Array(15).fill().map(() => Array(15).fill("empty"));
+            }
+        }
+
+        function ensureDifficultyDisplay() {
+            const display = document.getElementById('difficulty-display');
+            const urlParams = new URLSearchParams(window.location.search);
+            let d = urlParams.get('difficulty') || sessionStorage.getItem('ai_difficulty') || 'medium';
+            d = ['easy','medium','hard'].includes(d) ? d : 'medium';
+            const map = { easy: '简单', medium: '中等', hard: '困难' };
+            if (display) display.textContent = '本局难度：' + (map[d] || d);
+            difficultyState.current = d;
         }
 
         // 创建棋盘
@@ -388,6 +464,8 @@
                     cell.className = 'cell';
                     cell.dataset.row = i;
                     cell.dataset.col = j;
+                    // 双保险：即使事件委托失效，逐格绑定也能工作
+                    cell.addEventListener('click', handleCellClick);
                     boardElement.appendChild(cell);
                 }
             }
@@ -416,6 +494,7 @@
             const cell = event.target;
             const x = parseInt(cell.dataset.row);
             const y = parseInt(cell.dataset.col);
+            console.log('click cell', {x, y});
 
             // 前端先判断是否合法
             if (!isValidMove(x, y)) {
@@ -427,6 +506,7 @@
             cell.classList.add('black'); // 添加黑色棋子类
             gameState.boardState[x][y] = 'black'; // 更新游戏状态
             gameState.currentPlayer = 'white'; // 切换到下一个玩家
+            try { sounds.place.currentTime = 0; sounds.place.play(); } catch (e) {}
 
             // 显示思考提示
             showThinkingMessage();
@@ -438,48 +518,76 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({ x, y })
             })
                 .then(response => response.json())
                 .then(data => {
+                    console.log('move response', data);
                     isThinking = false; // 重置思考状态
                     hideThinkingMessage(); // 隐藏思考提示
 
                     // 处理游戏结果
-                    if (data.winner !== 'none') {
+                    if (data.winner && data.winner !== 'none') {
                         isGameOver = true; // 设置游戏结束标志
                         hideThinkingMessage(); // 隐藏思考提示
                         if (data.winner !== 'human') {
-                            const aiMove = data.last_move;
-                            const aiCell = document.querySelector(
-                                `[data-row="${aiMove.x}"][data-col="${aiMove.y}"]`
-                            );
-                            aiCell.classList.add('white'); // 添加白色棋子类
-                            gameState.boardState[aiMove.x][aiMove.y] = 'white'; // 更新游戏状态
+                            if (data.last_move) {
+                                const aiMove = data.last_move;
+                                const aiCell = document.querySelector(
+                                    `[data-row="${aiMove.x}"][data-col="${aiMove.y}"]`
+                                );
+                                if (aiCell) {
+                                    aiCell.classList.add('white'); // 添加白色棋子类
+                                    gameState.boardState[aiMove.x][aiMove.y] = 'white'; // 更新游戏状态
+                                }
+                            }
                             gameState.currentPlayer = 'black'; // 切换回人类玩家
                         }
                         setTimeout(() => {
-                            alert(data.winner === 'human' ? '恭喜你，获胜了！' : 'AI获胜！');
+                            let msg = '游戏结束';
+                            if (data.winner === 'human') msg = '恭喜你，获胜了！';
+                            else if (data.winner === 'ai') msg = 'AI获胜！';
+                            else if (data.winner === 'draw') msg = '平局！';
+                            
+                            alert(msg);
                             displayWinner(data.winner); // 显示获胜方
                             disableBoard(); // 禁用棋盘
-                            return; // 确保在胜利时直接返回，不执行后续逻辑
                         }, 100);
+                        return; 
                     }
 
                     if (data.status === 'error') {
                         // 如果服务器返回错误，回滚前端的改动
+                        if (data.message === 'Unauthorized') {
+                            // 会话失效，直接重定向到登录页，不弹窗打断用户
+                            // 使用 replace 避免用户点后退按钮陷入死循环
+                            window.location.replace('/entry'); 
+                            return;
+                        }
                         alert(data.message);
                         return;
                     }
 
                     // 显示 AI 的落子
-                    const aiMove = data.last_move;
-                    const aiCell = document.querySelector(
-                        `[data-row="${aiMove.x}"][data-col="${aiMove.y}"]`
-                    );
-                    aiCell.classList.add('white'); // 添加白色棋子类
-                    gameState.boardState[aiMove.x][aiMove.y] = 'white'; // 更新游戏状态
-                    gameState.currentPlayer = 'black'; // 切换回人类玩家
+                    if (data.last_move) {
+                        const aiMove = data.last_move;
+                        const aiCell = document.querySelector(
+                            `[data-row="${aiMove.x}"][data-col="${aiMove.y}"]`
+                        );
+                        if (aiCell) {
+                            aiCell.classList.add('white'); // 添加白色棋子类
+                            gameState.boardState[aiMove.x][aiMove.y] = 'white'; // 更新游戏状态
+                        }
+                        gameState.currentPlayer = 'black'; // 切换回人类玩家
+                        try { sounds.place.currentTime = 0; sounds.place.play(); } catch (e) {}
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    alert('网络请求失败: ' + error.message);
+                    isThinking = false;
+                    hideThinkingMessage();
                 });
         }
 
@@ -517,10 +625,39 @@
 
         // 添加事件监听
         function addEventListeners() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                cell.addEventListener('click', handleCellClick);
+            const board = document.getElementById('board');
+            if (!board) return;
+            // 事件委托，确保所有格子（包括重建后）都能响应
+            board.addEventListener('click', function (e) {
+                const cell = e.target.closest('.cell');
+                if (!cell || !board.contains(cell)) return;
+                // 构造伪事件对象，复用现有处理函数
+                handleCellClick({ target: cell });
             });
+            // 触摸支持，降低移动端延迟
+            board.addEventListener('touchstart', function (e) {
+                const cell = e.target.closest('.cell');
+                if (!cell || !board.contains(cell)) return;
+                e.preventDefault();
+                handleCellClick({ target: cell });
+            }, { passive: false });
+        }
+
+        function setupDifficultySelector() {
+            const select = document.getElementById('difficulty-select');
+            const display = document.getElementById('difficulty-display');
+            const urlParams = new URLSearchParams(window.location.search);
+            let d = urlParams.get('difficulty') || sessionStorage.getItem('ai_difficulty') || 'medium';
+            d = ['easy','medium','hard'].includes(d) ? d : 'medium';
+            difficultyState.current = d;
+            if (select) {
+                select.value = d;
+                select.disabled = true;
+            }
+            if (display) {
+                const map = { easy: '简单', medium: '中等', hard: '困难' };
+                display.textContent = '本局难度：' + (map[d] || d);
+            }
         }
 
         // 添加返回菜单函数
@@ -633,14 +770,35 @@
         // 在页面加载时添加样式
         document.head.insertAdjacentHTML('beforeend', loadingStyles);
 
-        // 确保在 DOM 加载完成后初始化
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function () {
+        // 全局错误兜底，便于前端可视化排查
+        window.addEventListener('error', function (e) {
+            console.error('Global error', e.message, e.filename, e.lineno);
+            const res = document.getElementById('result');
+            if (res) {
+                res.textContent = '前端脚本错误: ' + e.message;
+            }
+        });
+
+        function boot() {
+            try {
                 initializeGame();
-            });
-        } else {
-            initializeGame();
+            } catch (err) {
+                console.error('init failed', err);
+                const res = document.getElementById('result');
+                if (res) res.textContent = '初始化失败: ' + err.message;
+            }
+            setTimeout(ensureBoardReady, 150);
+            setTimeout(ensureDifficultyDisplay, 120);
+            // 兜底：暴露给全局，避免内联调用报错
+            window.restartGame = restartGame;
+            window.returnToMenu = returnToMenu;
+            const res = document.getElementById('result');
+            if (res) res.textContent = '脚本已初始化';
         }
+
+        // 直接执行（脚本位于 body 末尾，DOM 已就绪）；同时保留兜底定时器
+        boot();
+        window.onload = function () { try { boot(); } catch (e) {} };
 
         // 添加页面刷新/关闭时的处理
         window.addEventListener('beforeunload', function (e) {

@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <muduo/base/Logging.h>
 
 namespace http
 {
@@ -18,17 +19,22 @@ namespace session
     std::shared_ptr<Session> SessionManager::getSession(const HttpRequest &req, HttpResponse *resp)
     {
         std::string sessionId = getSessionIdFromCookie(req);
+        LOG_INFO << "Getting session for cookie ID: " << sessionId << ", Cookie Header: " << req.getHeader("Cookie");
 
         std::shared_ptr<Session> session;
 
         if(!sessionId.empty())
         {
             session = storage_->load(sessionId);
+             if (session) LOG_INFO << "Session loaded from storage: " << sessionId;
+             else LOG_INFO << "Session not found in storage: " << sessionId;
         }
 
         if(!session || session->isExpired())
         {
+             if (session && session->isExpired()) LOG_INFO << "Session expired: " << sessionId;
             sessionId = generateSessionId();
+            LOG_INFO << "Generating new session ID: " << sessionId;
             session = std::make_shared<Session>(sessionId, this);
             setSessionCookie(sessionId, resp);
         }
@@ -45,15 +51,16 @@ namespace session
     // 生成唯一的会话标识符
     std::string SessionManager::generateSessionId()
     {
-        std::stringstream ss;
-        std::uniform_real_distribution<> dist(0, 15);
-
-        // 生成32个字符的会话ID（16进制）
-        for(int i = 0; i < 32; ++i)
+        std::lock_guard<std::mutex> lock(mutex_);
+        static const char* hex = "0123456789abcdef";
+        std::uniform_int_distribution<int> dist(0, 15);
+        std::string id;
+        id.reserve(32);
+        for (int i = 0; i < 32; ++i)
         {
-            ss << std::hex << dist(rng_);
+            id.push_back(hex[dist(rng_)]);
         }
-        return ss.str();
+        return id;
     }
 
     void SessionManager::destroySession(const std::string& sessionId)
@@ -68,22 +75,34 @@ namespace session
     {
         std::string sessionId;
         std::string cookie = req.getHeader("Cookie");
+        
+        // Debug Log
+        if (!cookie.empty()) {
+            LOG_INFO << "Received Cookie Header: [" << cookie << "]";
+        } else {
+            LOG_INFO << "Received Request with NO Cookie Header";
+        }
 
+        // 简单的解析，查找 "sessionId="
+        // 改进：确保匹配的是完整键名
         if(!cookie.empty())
         {
-            size_t pos = cookie.find("sessionId=");
-            if(pos != std::string::npos)
+            std::string key = "sessionId=";
+            size_t pos = cookie.find(key);
+            while (pos != std::string::npos)
             {
-                pos += 10; 
-                size_t end = cookie.find(";", pos);
-                if(end != std::string::npos)
+                // check prefix (start of string or space or semicolon)
+                if (pos == 0 || cookie[pos-1] == ' ' || cookie[pos-1] == ';')
                 {
-                    sessionId = cookie.substr(pos, end - pos);
+                   pos += key.length();
+                   size_t end = cookie.find(";", pos);
+                   if(end != std::string::npos)
+                       sessionId = cookie.substr(pos, end - pos);
+                   else
+                       sessionId = cookie.substr(pos);
+                   break;
                 }
-                else
-                {
-                    sessionId = cookie.substr(pos);
-                }
+                pos = cookie.find(key, pos + 1);
             }
         }
         return sessionId;
@@ -91,7 +110,9 @@ namespace session
 
     void SessionManager::setSessionCookie(const std::string &sessionId, HttpResponse* resp)
     {
-        std::string cookie = "sessionId=" + sessionId + "; path=/; HttpOnly"; // 设置响应头cookie中会话id
+        // 回退到最兼容的设置：SameSite=Lax, HttpOnly. 移除 Secure 以避免本地证书问题
+        std::string cookie = "sessionId=" + sessionId + "; path=/; HttpOnly; SameSite=Lax";
+        // LOG_INFO << "Setting cookie: " << cookie;
         resp->addHeader("Set-Cookie", cookie);
     }
 

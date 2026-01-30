@@ -4,7 +4,7 @@ void EntryHandler::handle(const http::HttpRequest& req, http::HttpResponse* resp
 {
     // 因为是get请求，请求的url也拿到了，我们就可以直接返回响应了
     std::string reqFile;
-    reqFile.append("WebApps/GomokuServer/resource/entry.html");
+    reqFile.append("/home/ubuntu/HTTPserver/WebApps/GomokuServer/resource/entry.html");
     FileUtil fileOperater(reqFile);
     if (!fileOperater.isValid())
     {

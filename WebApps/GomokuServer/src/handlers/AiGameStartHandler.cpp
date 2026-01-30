@@ -5,30 +5,43 @@ void AiGameStartHandler::handle(const http::HttpRequest &req, http::HttpResponse
     auto session = server_->getSessionManager()->getSession(req, resp);
     if (session->getValue("isLoggedIn") != "true")
     {
-        // 用户未登录，返回未授权错误
-        json errorResp;
-        errorResp["status"] = "error";
-        errorResp["message"] = "Unauthorized";
-        std::string errorBody = errorResp.dump(4);
-
-        server_->packageResp(req.getVersion(), http::HttpResponse::k401Unauthorized,
-                             "Unauthorized", true, "application/json", errorBody.size(),
-                             errorBody, resp);
+        // 页面路由未登录，重定向到登录页
+        resp->setStatusLine(req.getVersion(), http::HttpResponse::k302Found, "Found");
+        resp->addHeader("Location", "/entry");
+        resp->setCloseConnection(false);
+        resp->setContentType("text/plain");
+        resp->setContentLength(0);
+        resp->setBody("");
         return;
     }
 
     int userId = std::stoi(session->getValue("userId"));
 
-    // 看来需要menu页面post发送userId
+    // 解析难度（优先取URL参数，其次取会话，默认medium）
+    auto diffStr = req.getQueryParameters("difficulty");
+    if (diffStr.empty()) {
+        diffStr = session->getValue("ai_difficulty");
+        if (diffStr.empty()) diffStr = "medium";
+    }
+    auto parseDifficulty = [](const std::string& d) {
+        if (d == "easy") return Difficulty::Easy;
+        if (d == "hard") return Difficulty::Hard;
+        return Difficulty::Medium;
+    };
+    Difficulty diff = parseDifficulty(diffStr);
+    // 固定整局难度到会话
+    session->setValue("ai_difficulty", diffStr);
+
+    // 创建新对局并设置难度
     {
         std::lock_guard<std::mutex> lock(server_->mutexForAiGames_);
         if (server_->aiGames_.find(userId) != server_->aiGames_.end())
             server_->aiGames_.erase(userId);
-        server_->aiGames_[userId] = std::make_shared<AiGame>(userId);
+        server_->aiGames_[userId] = std::make_shared<AiGame>(userId, diff);
     }
 
     // 创建一个ai机器人，它就while不断地执行下棋逻辑
-    std::string reqFile("WebApps/GomokuServer/resource/ChessGameVsAi.html");
+    std::string reqFile("/home/ubuntu/HTTPserver/WebApps/GomokuServer/resource/ChessGameVsAi.html");
     FileUtil fileOperater(reqFile);
     if (!fileOperater.isValid())
     {
@@ -43,6 +56,9 @@ void AiGameStartHandler::handle(const http::HttpRequest &req, http::HttpResponse
     resp->setStatusLine(req.getVersion(), http::HttpResponse::k200Ok, "OK");
     resp->setCloseConnection(false);
     resp->setContentType("text/html");
+    resp->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    resp->addHeader("Pragma", "no-cache");
+    resp->addHeader("Expires", "0");
     resp->setContentLength(htmlContent.size());
     resp->setBody(htmlContent);
 }

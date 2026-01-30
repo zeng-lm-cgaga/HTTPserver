@@ -36,8 +36,12 @@ void GomokuServer::initialize()
     // 初始化 SSL 配置
     httpServer_.enableSSL(true);
     ssl::SslConfig sslConfig;
-    sslConfig.setCertificateFile("certs/server.crt");
-    sslConfig.setPrivateKeyFile("certs/server.key");
+    sslConfig.setCertificateFile("/home/ubuntu/HTTPserver/certs/server.crt");
+    sslConfig.setCertificateChainFile("/home/ubuntu/HTTPserver/certs/server_chain.crt");
+    sslConfig.setPrivateKeyFile("/home/ubuntu/HTTPserver/certs/server.key");
+    // 显式设置最低协议与现代套件（留空使用内置现代默认）
+    sslConfig.setProtocolVersion(ssl::SSLVersion::TLS_1_2);
+    sslConfig.setCipherList("");
     httpServer_.setSslConfig(sslConfig);
 
     // 初始化数据库连接池

@@ -10,15 +10,13 @@ void MenuHandler::handle(const http::HttpRequest &req, http::HttpResponse *resp)
         LOG_INFO << "session->getValue(\"isLoggedIn\") = " << session->getValue("isLoggedIn");
         if (session->getValue("isLoggedIn") != "true")
         {
-            // 用户未登录，返回未授权错误
-            json errorResp;
-            errorResp["status"] = "error";
-            errorResp["message"] = "Unauthorized";
-            std::string errorBody = errorResp.dump(4);
-
-            server_->packageResp(req.getVersion(), http::HttpResponse::k401Unauthorized,
-                                "Unauthorized", true, "application/json", errorBody.size(),
-                                 errorBody, resp);
+            // 页面路由未登录，重定向到登录页
+            resp->setStatusLine(req.getVersion(), http::HttpResponse::k302Found, "Found");
+            resp->addHeader("Location", "/entry");
+            resp->setCloseConnection(false);
+            resp->setContentType("text/plain");
+            resp->setContentLength(0);
+            resp->setBody("");
             return;
         }
 
@@ -26,7 +24,7 @@ void MenuHandler::handle(const http::HttpRequest &req, http::HttpResponse *resp)
         int userId = std::stoi(session->getValue("userId"));
         std::string username = session->getValue("username");
 
-        std::string reqFile("WebApps/GomokuServer/resource/menu.html");
+        std::string reqFile("/home/ubuntu/HTTPserver/WebApps/GomokuServer/resource/menu.html");
         FileUtil fileOperater(reqFile);
         if (!fileOperater.isValid())
         {

@@ -96,20 +96,35 @@ void SslConnection::send(const void* data, size_t len)
         return;
     }
     
-    int written = SSL_write(ssl_, data, len);
-    if (written <= 0) {
-        int err = SSL_get_error(ssl_, written);
-        LOG_ERROR << "SSL_write failed: " << ERR_error_string(err, nullptr);
-        return;
-    }
-    
-    char buf[4096];
-    int pending;
-    while ((pending = BIO_pending(writeBio_)) > 0) {
-        int bytes = BIO_read(writeBio_, buf, 
-                           std::min(pending, static_cast<int>(sizeof(buf))));
-        if (bytes > 0) {
-            conn_->send(buf, bytes);
+    const char* ptr = static_cast<const char*>(data);
+    size_t remaining = len;
+
+    while (remaining > 0)
+    {
+        int written = SSL_write(ssl_, ptr, remaining);
+        if (written <= 0) {
+            int err = SSL_get_error(ssl_, written);
+            if (err == SSL_ERROR_WANT_WRITE || err == SSL_ERROR_WANT_READ)
+            {
+                // 需要继续写，或者系统缓冲区满（虽然内存BIO不太会满），继续尝试
+                continue; 
+            }
+            LOG_ERROR << "SSL_write failed: " << ERR_error_string(err, nullptr);
+            return;
+        }
+
+        ptr += written;
+        remaining -= written;
+
+        // 每次写入后，尽可能将加密后的数据发送出去
+        char buf[4096];
+        int pending;
+        while ((pending = BIO_pending(writeBio_)) > 0) {
+            int bytes = BIO_read(writeBio_, buf, 
+                            std::min(pending, static_cast<int>(sizeof(buf))));
+            if (bytes > 0) {
+                conn_->send(buf, bytes);
+            }
         }
     }
 }
@@ -117,22 +132,25 @@ void SslConnection::send(const void* data, size_t len)
 void SslConnection::onRead(const TcpConnectionPtr& conn, BufferPtr buf, 
                          muduo::Timestamp time) 
 {
-    if (state_ == SSLState::HANDSHAKE) {
-        // 将数据写入 BIO
-        if (buf->readableBytes() > 0)
-        {
-            BIO_write(readBio_, buf->peek(), buf->readableBytes());
-            buf->retrieve(buf->readableBytes());
-        }
-        handleHandshake();
-        return;
-    } else if (state_ == SSLState::ESTABLISHED) {
-        if (buf->readableBytes() > 0)
-        {
-            BIO_write(readBio_, buf->peek(), buf->readableBytes());
-            buf->retrieve(buf->readableBytes());
-        }
+    // 统一处理：先把收到的网络数据写入 readBio_
+    if (buf->readableBytes() > 0)
+    {
+        BIO_write(readBio_, buf->peek(), buf->readableBytes());
+        buf->retrieve(buf->readableBytes());
+    }
 
+    // 握手阶段处理
+    if (state_ == SSLState::HANDSHAKE) {
+        handleHandshake();
+        // 如果握手后状态仍不是 ESTABLISHED，说明还需要更多数据或步骤，直接返回
+        if (state_ != SSLState::ESTABLISHED) {
+            return;
+        }
+        // 如果握手刚刚完成，继续向下执行，尝试解密可能与握手包一起到达的应用数据
+    } 
+    
+    // 数据传输阶段（包括刚完成握手的情况）
+    if (state_ == SSLState::ESTABLISHED) {
         // 解密数据并写入解密缓冲区
         while (true)
         {

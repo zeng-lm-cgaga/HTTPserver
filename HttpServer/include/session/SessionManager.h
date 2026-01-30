@@ -5,6 +5,7 @@
 #include "../http/HttpResponse.h"
 #include <memory>
 #include <random>
+#include <mutex>
 
 namespace http
 {
@@ -40,6 +41,7 @@ private:
 private:
     std::unique_ptr<SessionStorage> storage_;
     std::mt19937 rng_; // 生成随机会话id
+    std::mutex mutex_;
 };
 
 } // namespace session

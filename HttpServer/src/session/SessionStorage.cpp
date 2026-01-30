@@ -9,12 +9,14 @@ namespace session
 
     void MemorySessionStorage::save(std::shared_ptr<Session> session)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         sessions_[session->getId()] = session;
     }
 
     // 加载会话
     std::shared_ptr<Session> MemorySessionStorage::load(const std::string &sessionId)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         auto it = sessions_.find(sessionId);
         if(it != sessions_.end())
         {
@@ -33,6 +35,7 @@ namespace session
 
     void MemorySessionStorage::remove(const std::string &sessionId)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         sessions_.erase(sessionId);
     }
 

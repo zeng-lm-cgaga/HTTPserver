@@ -277,10 +277,20 @@
             <div class="menu-border"></div>
 
             <div class="menu-option-list">
-                <div class="menu-option" id="play-ai">
+                <div class="menu-option" style="cursor: default;">
+                    <span class="desc">AI 难度</span>
+                    <span class="meta">
+                        <select id="menu-difficulty-select" style="background: rgba(15,23,42,0.85); color: #e5edff; border: 1px solid rgba(148,163,255,0.5); border-radius: 8px; padding: 4px 8px;">
+                            <option value="easy">简单</option>
+                            <option value="medium" selected>中等</option>
+                            <option value="hard">困难</option>
+                        </select>
+                    </span>
+                </div>
+                <a class="menu-option" id="play-ai" href="/aiBot/start?difficulty=medium" role="button" tabindex="0">
                     <span class="desc">对战 AI</span>
                     <span class="meta">推荐 · 提升棋力</span>
-                </div>
+                </a>
                 <div class="menu-option">
                     <span class="desc">匹配玩家</span>
                     <span class="meta">敬请期待</span>
@@ -293,7 +303,7 @@
 
             <div class="menu-footer">如长时间无响应，请刷新页面重新进入菜单</div>
 
-            <button class="back-entry-btn" id="back-to-entry">返回登录界面</button>
+            <a class="back-entry-btn" id="back-to-entry" href="/entry">返回登录界面</a>
         </div>
     </div>
 
@@ -323,6 +333,19 @@
                 menuContainer.style.display = 'block';
             });
 
+            // 绑定难度选择，动态更新链接
+            const select = document.getElementById('menu-difficulty-select');
+            const playAi = document.getElementById('play-ai');
+            if (select && playAi) {
+                const updateHref = () => {
+                    const d = select.value || 'medium';
+                    playAi.href = `/aiBot/start?difficulty=${encodeURIComponent(d)}`;
+                    sessionStorage.setItem('ai_difficulty', d);
+                };
+                select.addEventListener('change', updateHref);
+                updateHref();
+            }
+
             // 添加超时保护
             setTimeout(() => {
                 if (loadingContainer.style.display !== 'none') {
@@ -332,45 +355,6 @@
                 }
             }, 2000); // 2秒后强制显示菜单
         });
-
-        // 对战AI功能
-        function startAiGame() {
-            const userId = sessionStorage.getItem('userId');
-
-            fetch('/aiBot/start', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'text/html'
-                }
-            })
-                .then(response => response.text())
-                .then(html => {
-                    // 完全清除当前页面
-                    document.open();
-                    document.write(html);
-                    document.close();
-
-                    // 确保在页面完全加载后初始化
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', function () {
-                            if (typeof initializeGame === 'function') {
-                                initializeGame();
-                            }
-                        });
-                    } else {
-                        if (typeof initializeGame === 'function') {
-                            initializeGame();
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('启动AI对战失败，请稍后重试！');
-                });
-        }
-
-        // 绑定点击事件到对战AI按钮
-        document.getElementById('play-ai').addEventListener('click', startAiGame);
 
         // 退出游戏 - 关闭网页
         document.getElementById('exit-game').addEventListener('click', function () {
@@ -403,7 +387,7 @@
         });
 
         // 返回登录界面并结束登录状态
-        document.getElementById('back-to-entry').addEventListener('click', function () {
+        document.getElementById('back-to-entry').addEventListener('click', function (e) {
             const userId = sessionStorage.getItem('userId');
 
             try {
@@ -420,28 +404,12 @@
                         gameType: 0
                     })], { type: 'application/json' });
 
-                    // 优先用 sendBeacon 通知后端登出
-                    const ok = navigator.sendBeacon('/user/logout', data);
-
-                    if (!ok) {
-                        // 退化为普通异步请求，但不阻塞跳转
-                        fetch('/user/logout', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                userId: userId,
-                                type: 'manual',
-                                gameType: 0
-                            })
-                        }).catch(err => console.warn('logout fallback failed:', err));
-                    }
+                    navigator.sendBeacon('/user/logout', data);
                 } catch (e) {
                     console.warn('logout beacon failed:', e);
                 }
             }
-
-            // 立即跳转到登录页
-            window.location.href = '/entry';
+            // 链接自身会导航到 /entry
         });
 
         // 添加页面刷新/关闭时的处理

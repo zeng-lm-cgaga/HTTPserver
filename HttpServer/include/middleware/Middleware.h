@@ -2,6 +2,7 @@
 
 #include "../http/HttpRequest.h"
 #include "../http/HttpResponse.h"
+#include <memory>
 
 namespace http
 {

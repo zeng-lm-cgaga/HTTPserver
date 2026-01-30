@@ -27,11 +27,15 @@ public:
     void resetDefaultFile()
     {
         file_.close();
-        file_.open("/Gomoku/GomokuServer/resource/NotFound.html", std::ios::binary);
+        file_.open("/home/ubuntu/HTTPserver/WebApps/GomokuServer/resource/NotFound.html", std::ios::binary);
     }
 
     uint64_t size()
     {
+        if (!file_.is_open())
+        {
+            return 0;
+        }
         file_.seekg(0, std::ios::end); // 定位到文件末尾
         uint64_t fileSize = file_.tellg();
         file_.seekg(0, std::ios::beg); // 返回到文件开头

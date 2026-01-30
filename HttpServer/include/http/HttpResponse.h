@@ -1,6 +1,8 @@
 #pragma once
 
-#include <muduo/net/TcpServer.h>
+#include <muduo/net/Buffer.h>
+#include <map>
+#include <string>
 
 namespace http
 {
@@ -14,6 +16,7 @@ public:
         k200Ok = 200,
         k204NoContent = 204,
         k301MovedPermanently = 301,
+        k302Found = 302,
         k400BadRequest = 400,
         k401Unauthorized = 401,
         k403Forbidden = 403,
@@ -23,7 +26,9 @@ public:
     };
 
     HttpResponse(bool close = true)
-        : statusCode_(kUnknown)
+        : httpVersion_("HTTP/1.1")
+        , statusCode_(k200Ok)
+        , statusMessage_("OK")
         , closeConnection_(close)
     {}
 
@@ -32,7 +37,7 @@ public:
     void setStatusCode(HttpStatusCode code)
     { statusCode_ = code; }
 
-    HttpResponse getStatusCode() const
+    HttpStatusCode getStatusCode() const
     { return statusCode_; }
 
     void setStatusMessage(const std::string message)

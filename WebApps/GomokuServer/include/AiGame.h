@@ -14,10 +14,17 @@ const std::string EMPTY = "empty";
 const std::string AI_PLAYER = "white";   // AI玩家白棋
 const std::string HUMAN_PLAYER = "black"; // 人类玩家黑棋
 
+enum class Difficulty
+{
+    Easy,
+    Medium,
+    Hard
+};
+
 class AiGame
 {
 public:
-    AiGame(int userId);
+    AiGame(int userId, Difficulty difficulty = Difficulty::Medium);
 
     // 判断是否平局
     bool isDraw() const
@@ -31,6 +38,12 @@ public:
     bool checkWin(int x,int y, const std::string& player);
 
     void aiMove();
+
+    void setDifficulty(Difficulty diff)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        difficulty_ = diff;
+    }
 
     // 获取最后一步移动的坐标
     std::pair<int, int> getLastMove() const 
@@ -74,17 +87,22 @@ private:
         return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
     }
 
-    // 获取AI的最佳移动位置
-    std::pair<int, int> getBestMove();
-    // 评估威胁 
+    // 获取AI的移动位置（分难度）
+    std::pair<int, int> getMoveEasy();
+    std::pair<int, int> getMoveMedium();
+    std::pair<int, int> getMoveHard();
+
+    // 评估相关辅助函数
     int evaluateThreat(int r, int c);
-    // 判断某个空位是否靠近已有棋子
     bool isNearOccupied(int r, int c);
+    int evaluateBoardScore();
+    std::vector<std::pair<int, int>> collectCandidateMoves(int limit = 40);
 
 private:
     bool                                  gameOver_;
     int                                   userId_;
     int                                   moveCount_;
+    Difficulty                            difficulty_;
     std::string                           winner_{"none"};
     std::pair<int, int>                   lastMove_{-1, -1};  // 上一次落子位置
     std::vector<std::vector<std::string>> board_;
