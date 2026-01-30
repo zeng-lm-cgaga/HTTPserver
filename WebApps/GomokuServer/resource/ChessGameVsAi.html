@@ -816,14 +816,9 @@
             }
         });
 
-        // 确保在页面加载时从 sessionStorage 获取 userId
-        document.addEventListener('DOMContentLoaded', function () {
-            const userId = sessionStorage.getItem('userId');
-            if (!userId) {
-                // 如果没有 userId，重定向到登录页面
-                window.location.href = '/entry';
-            }
-        });
+        // 不再在前端检查 sessionStorage 中的 userId
+        // 服务端已通过 session cookie 完成身份验证（见 AiGameMoveHandler）
+        // 前端额外检查会导致不必要的重定向问题
 
         // 显示思考提示和加载动画
         function showThinkingMessage() {
