@@ -568,6 +568,8 @@
 
                     if (data.status === 'error') {
                         // 如果服务器返回错误，回滚前端的改动
+                        // Note: This is a fallback check. The HTTP 401 status is checked above (line 526),
+                        // but this handles edge cases where server returns 200 with error payload
                         if (data.message === 'Unauthorized') {
                             // 会话失效，直接重定向到登录页，不弹窗打断用户
                             // 使用 replace 避免用户点后退按钮陷入死循环
